@@ -139,7 +139,7 @@ public final class AppleSpeechSession: STTStream {
         let vocabulary = context.vocabulary
         startTask = Task {
             if !vocabulary.isEmpty {
-                var analysisContext = AnalysisContext()
+                let analysisContext = AnalysisContext()
                 analysisContext.contextualStrings = [.general: vocabulary]
                 try await analyzer.setContext(analysisContext)
             }
