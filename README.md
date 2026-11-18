@@ -12,7 +12,7 @@ has focus (mostly the Claude desktop app). Everything runs on your Mac; no audio
 | Stage | What | State |
 |---|---|---|
 | 1 | Hotkeys, recording, VAD gate, transcription (whisper.cpp / Apple SpeechAnalyzer), engine comparison | **Built and measured: Whisper large-v3-turbo with beam search, 7.0% WER, ~0.4 s** |
-| 2 | Paste into the focused field (clipboard save/restore), overlay | next |
+| 2 | Paste into the focused field (clipboard save/restore), overlay | **Built, waiting for your verification** |
 | 3 | Local LLM cleanup (Ollama), rewrite-only prompt, guardrails and fallback, raw/clean toggle | |
 | 4 | Context from the Claude desktop app (investigate Accessibility first) | |
 | 5 | Chrome extension | later |
@@ -51,8 +51,8 @@ Sources/
   DictateCore/      pure Swift, unit-tested (also on Linux): config, hotkey state machine,
                     VAD gate, transcript cleanup, latency timer, history log, WAV
   DictateKit/       macOS: audio recorder, STT engines (whisper.cpp, Apple), Silero VAD,
-                    event-tap hotkeys, permissions
-  SpeechToPrompt/   the menu bar app
+                    event-tap hotkeys, paster (clipboard + ⌘V + restore), permissions
+  SpeechToPrompt/   the menu bar app and its overlay
   dictate-cli/      record eval clips; run the app's pipeline on files
 Tests/DictateCoreTests
 eval/               prompts.txt, compare.py (engine comparison report), metrics.py

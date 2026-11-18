@@ -9,13 +9,18 @@ How the options compare:
 
 | How | Permissions | Starts at login | UI | Verdict |
 |---|---|---|---|---|
-| **Menu bar .app** | Granted to the app itself; persist across rebuilds if signed with a development certificate | Yes (Launch at Login, via `SMAppService`) | Menu bar icon, overlay (stage 2) | **Use this** |
+| **Menu bar .app** | Granted to the app itself; persist across rebuilds if signed with a development certificate | Yes (Launch at Login, via `SMAppService`) | Menu bar icon, overlay | **Use this** |
 | Terminal (`.build/release/SpeechToPrompt`) | Attributed to *Terminal*, which then gets Input Monitoring and Accessibility for everything you run in it | No; stops when the window closes | Same, but tied to the terminal | Only for debugging |
 | launchd agent | Background agents without a bundle are awkward to grant permissions to; prompts may not appear | Yes | No UI | No benefit over Launch at Login |
 
-## Watching what it does (stage 1)
+## What happens when you dictate
 
-Stage 1 doesn't paste yet. Each transcript goes to:
+The text is pasted into the focused field: your clipboard is saved, the text is put on it, ⌘V is
+sent, and ~0.35 s later your clipboard is put back (unless you copied something new in between).
+The overlay in the top-right corner shows listening (waveform) → processing (rotating ring) →
+done (check mark), and doesn't take focus.
+
+Each transcript also goes to:
 
 1. **The unified log.** Watch it live:
 
@@ -37,8 +42,8 @@ Stage 1 doesn't paste yet. Each transcript goes to:
 
 | Mode | Default key | Behavior |
 |---|---|---|
-| Raw | **Right ⌥** (hold) | Transcribe → (stage 2) paste |
-| Clean | **Right ⌘** (hold) | Transcribe → (stage 3) LLM rewrite → paste. In stage 1 it behaves like raw. |
+| Raw | **Right ⌥** (hold) | Transcribe → paste |
+| Clean | **Right ⌘** (hold) | Transcribe → LLM rewrite (stage 3) → paste. Until stage 3 it pastes the raw transcript. |
 
 - **Hold:** recording starts the instant the key goes down and stops on release. Presses shorter than
   0.2 s are ignored (accidental taps).
@@ -80,7 +85,11 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
   "phantomPhrases": ["thank you", "thanks for watching", "…"],
   "phantomMaxSpeechSeconds": 1.5,
   "saveAudio": false,
-  "writeHistory": true
+  "writeHistory": true,
+  "autoPaste": true,
+  "pasteRestoreDelaySeconds": 0.35,
+  "showOverlay": true,
+  "overlayDoneSeconds": 1.5
 }
 ```
 
@@ -94,6 +103,9 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
 | `vocabulary` | Names and jargon you use. Sent to Whisper as its initial prompt and to Apple's engine as contextual strings. Often the single biggest win for accented speech on proper nouns. |
 | `phantomPhrases` | If a clip with under `phantomMaxSpeechSeconds` of speech transcribes to exactly one of these, it's discarded (Whisper's classic "Thank you." on near-silence). |
 | `saveAudio` | Saves each recording under `recordings/`. Useful for building eval clips from real dictation. |
+| `autoPaste` | `true`: paste with ⌘V and restore your clipboard. `false`: only put the text on the clipboard. |
+| `pasteRestoreDelaySeconds` | Wait after ⌘V before restoring your clipboard. Raise it if an app sometimes pastes your *old* clipboard instead of the dictation. |
+| `showOverlay`, `overlayDoneSeconds` | The top-right overlay, and how long its "done" state stays up. |
 
 ## Files
 

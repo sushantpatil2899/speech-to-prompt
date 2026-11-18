@@ -23,12 +23,15 @@ public struct HistoryRecord: Codable, Equatable, Sendable {
     public var frontmostApp: String?
     /// Path of the saved WAV, if saveAudio is on.
     public var audioPath: String?
+    /// True if ⌘V was sent, false if the text was only copied, nil if nothing was output.
+    public var pasted: Bool?
 
     public init(
         timestamp: Date = Date(), mode: DictationMode, engine: String, llmModel: String? = nil,
         rawText: String, cleanedText: String? = nil, finalText: String, usedFallback: Bool = false,
         note: String? = nil, audioSeconds: Double, speechSeconds: Double,
-        latencyMS: [String: Double], frontmostApp: String? = nil, audioPath: String? = nil
+        latencyMS: [String: Double], frontmostApp: String? = nil, audioPath: String? = nil,
+        pasted: Bool? = nil
     ) {
         self.timestamp = timestamp
         self.mode = mode
@@ -44,6 +47,7 @@ public struct HistoryRecord: Codable, Equatable, Sendable {
         self.latencyMS = latencyMS
         self.frontmostApp = frontmostApp
         self.audioPath = audioPath
+        self.pasted = pasted
     }
 }
 

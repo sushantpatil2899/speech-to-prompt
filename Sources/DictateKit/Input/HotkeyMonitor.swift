@@ -84,6 +84,8 @@ public final class HotkeyMonitor {
     }
 
     private func handle(type: CGEventType, event: CGEvent) {
+        // Our own ⌘V / ⌘Z: not the user typing.
+        if event.getIntegerValueField(.eventSourceUserData) == SyntheticEvent.tag { return }
         let now = LatencyTimer.now()
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:

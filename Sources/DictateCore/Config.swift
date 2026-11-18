@@ -164,6 +164,16 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var saveAudio: Bool = false
     /// Append one JSON line per dictation to history.jsonl.
     public var writeHistory: Bool = true
+    /// Paste the result into the focused field (clipboard + ⌘V, then the clipboard is restored).
+    /// When false, the text is only put on the clipboard.
+    public var autoPaste: Bool = true
+    /// How long to wait after ⌘V before putting your previous clipboard back. Too short and a
+    /// slow app may paste the old clipboard; too long and a quick ⌘V of your own gets our text.
+    public var pasteRestoreDelaySeconds: Double = 0.35
+    /// Show the listening / processing overlay in the top-right corner.
+    public var showOverlay: Bool = true
+    /// How long the overlay's "done" state stays up in raw mode.
+    public var overlayDoneSeconds: Double = 1.5
 
     public init() {}
 
@@ -186,6 +196,10 @@ public struct AppConfig: Codable, Equatable, Sendable {
         phantomMaxSpeechSeconds = try c.decodeIfPresent(Double.self, forKey: .phantomMaxSpeechSeconds) ?? d.phantomMaxSpeechSeconds
         saveAudio = try c.decodeIfPresent(Bool.self, forKey: .saveAudio) ?? d.saveAudio
         writeHistory = try c.decodeIfPresent(Bool.self, forKey: .writeHistory) ?? d.writeHistory
+        autoPaste = try c.decodeIfPresent(Bool.self, forKey: .autoPaste) ?? d.autoPaste
+        pasteRestoreDelaySeconds = try c.decodeIfPresent(Double.self, forKey: .pasteRestoreDelaySeconds) ?? d.pasteRestoreDelaySeconds
+        showOverlay = try c.decodeIfPresent(Bool.self, forKey: .showOverlay) ?? d.showOverlay
+        overlayDoneSeconds = try c.decodeIfPresent(Double.self, forKey: .overlayDoneSeconds) ?? d.overlayDoneSeconds
     }
 
     /// Problems that make the config unusable.
@@ -197,6 +211,9 @@ public struct AppConfig: Codable, Equatable, Sendable {
         if engine.whisperBeamSize < 0 { errors.append("engine.whisperBeamSize must be >= 0.") }
         if maxRecordingSeconds <= 0 { errors.append("maxRecordingSeconds must be > 0.") }
         if vad.minSpeechSeconds < 0 { errors.append("vad.minSpeechSeconds must be >= 0.") }
+        if pasteRestoreDelaySeconds < 0.05 || pasteRestoreDelaySeconds > 5 {
+            errors.append("pasteRestoreDelaySeconds must be between 0.05 and 5.")
+        }
         return errors
     }
 

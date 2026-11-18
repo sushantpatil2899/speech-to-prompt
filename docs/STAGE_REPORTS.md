@@ -97,3 +97,49 @@ eval/.venv/bin/python eval/compare.py eval/clips --vocab "PostgreSQL,Kubernetes,
 - Anything that felt wrong: missed key presses, clipped first words, slow start.
 
 Then we pick the default engine and move to stage 2 (paste + overlay).
+
+## Stage 2: paste into the focused field, overlay
+
+### Build
+
+```bash
+git pull
+```
+
+```bash
+scripts/build_app.sh --open
+```
+
+On launch macOS asks for **Accessibility** ("SpeechToPrompt would like to control this computer").
+Allow it under System Settings → Privacy & Security → Accessibility. Menu → Permissions should now
+show ✓ for all three.
+
+### Check
+
+1. **TextEdit:** click into a document, hold Right ⌥, speak, release. The text appears at the cursor.
+   Meanwhile, in the top-right corner: a waveform that moves with your voice, then a rotating ring,
+   then a green check with the start of the text, fading after about 1.5 s.
+2. **Claude desktop app:** the same, in the message box.
+3. **Clipboard restore:** copy something distinctive (a sentence, or an image from Preview),
+   dictate, then press ⌘V yourself: your original clipboard should paste, not the dictation.
+   If you use a clipboard manager, the dictated text shouldn't appear in its history.
+4. **Focus:** right after a paste, keep typing; the keystrokes should go to the same field
+   (the overlay must never take focus). Also try with the target app in full screen.
+5. **Nothing to paste into** (click the desktop first): nothing breaks, and menu → "Copy last"
+   still has the text.
+6. **Silence:** hold the key without speaking → overlay says "No speech detected", nothing is pasted.
+7. **Clean key (Right ⌘):** pastes the raw transcript for now; the overlay says cleanup comes in stage 3.
+8. **Latency:**
+
+   ```bash
+   python3 tools/latency_report.py --since 2026-11-18
+   ```
+
+   The `pasted` row is the paste step; `total_from_keyUp` is now key release → text pasted.
+
+### Send me
+
+- The `latency_report.py` output.
+- Whether the clipboard came back every time (any app where it didn't?).
+- Any app where the paste didn't land, or landed somewhere else.
+- How the overlay looks and feels: size, position, animation. A screenshot helps.

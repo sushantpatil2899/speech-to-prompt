@@ -155,3 +155,46 @@ final class LatencyAndHistoryTests: XCTestCase {
         try? FileManager.default.removeItem(at: dir)
     }
 }
+
+final class LevelMeterTests: XCTestCase {
+    func testMapping() {
+        XCTAssertEqual(LevelMeter.normalized(rms: 0), 0)
+        XCTAssertEqual(LevelMeter.normalized(rms: .nan), 0)
+        XCTAssertEqual(LevelMeter.normalized(rms: 1e-4), 0)          // -80 dB
+        XCTAssertEqual(LevelMeter.normalized(rms: 1), 1)              // 0 dB
+        XCTAssertEqual(LevelMeter.normalized(rms: 0.01), 0.25, accuracy: 0.01)    // -40 dB
+        XCTAssertEqual(LevelMeter.normalized(rms: 0.0316), 0.5, accuracy: 0.01)   // -30 dB, midpoint
+        XCTAssertGreaterThan(LevelMeter.normalized(rms: 0.05), LevelMeter.normalized(rms: 0.01))
+    }
+
+    func testPushKeepsWindow() {
+        var levels: [Float] = []
+        for i in 0..<10 { LevelMeter.push(Float(i), into: &levels, count: 4) }
+        XCTAssertEqual(levels, [6, 7, 8, 9])
+    }
+}
+
+final class Stage2ConfigTests: XCTestCase {
+    func testPasteDefaults() throws {
+        let c = try JSONDecoder().decode(AppConfig.self, from: Data("{}".utf8))
+        XCTAssertTrue(c.autoPaste)
+        XCTAssertTrue(c.showOverlay)
+        XCTAssertEqual(c.pasteRestoreDelaySeconds, 0.35)
+        XCTAssertEqual(c.engine.whisperBeamSize, 5)
+    }
+
+    func testRestoreDelayValidated() {
+        var c = AppConfig()
+        c.pasteRestoreDelaySeconds = 0.01
+        XCTAssertFalse(c.validationErrors().isEmpty)
+    }
+
+    func testOldHistoryLinesStillDecode() throws {
+        // Stage-1 records have no "pasted" field.
+        let line = #"{"audioSeconds":1,"engine":"w","finalText":"hi","latencyMS":{},"mode":"raw","rawText":"hi","speechSeconds":1,"timestamp":"2026-11-18T10:00:00Z","usedFallback":false}"#
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        let r = try d.decode(HistoryRecord.self, from: Data(line.utf8))
+        XCTAssertNil(r.pasted)
+    }
+}

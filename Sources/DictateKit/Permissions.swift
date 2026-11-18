@@ -21,7 +21,7 @@ public enum Permission: String, CaseIterable, Sendable {
         switch self {
         case .microphone: return "record your voice"
         case .inputMonitoring: return "detect the push-to-talk keys"
-        case .accessibility: return "paste with ⌘V (from stage 2)"
+        case .accessibility: return "paste into the focused field (⌘V)"
         }
     }
 
