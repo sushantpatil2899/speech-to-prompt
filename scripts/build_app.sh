@@ -3,10 +3,11 @@
 #
 # Usage: scripts/build_app.sh [--no-install] [--open]
 #
-# Signing: uses your "Apple Development" certificate if you have one (Xcode → Settings →
-# Accounts → add your Apple ID → Manage Certificates → +). Override with
-# CODESIGN_IDENTITY="…". Without a certificate it signs ad hoc, which works, but macOS
-# then treats every rebuild as a new app and you must grant the permissions again.
+# Signing, in order of preference:
+#   1. CODESIGN_IDENTITY="…" if you set it
+#   2. an "Apple Development" certificate (needs full Xcode: Settings → Accounts)
+#   3. "SpeechToPrompt Local Signing", made by scripts/make_signing_cert.sh (no Xcode needed)
+#   4. ad hoc, which works but makes macOS forget the permissions after every rebuild
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -41,9 +42,13 @@ IDENTITY="${CODESIGN_IDENTITY:-}"
 if [[ -z "$IDENTITY" ]]; then
   IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/Apple Development/ {print $2; exit}')"
 fi
+if [[ -z "$IDENTITY" ]] && security find-identity -p codesigning 2>/dev/null | grep -q '"SpeechToPrompt Local Signing"'; then
+  IDENTITY="SpeechToPrompt Local Signing"
+fi
 if [[ -z "$IDENTITY" ]]; then
-  echo "WARNING: no Apple Development certificate found; signing ad hoc."
-  echo "         Permissions will need to be re-granted after every rebuild."
+  echo "WARNING: no signing certificate found; signing ad hoc."
+  echo "         macOS will forget the app's permissions after every rebuild."
+  echo "         Fix once with: scripts/make_signing_cert.sh"
   IDENTITY="-"
 fi
 echo "==> Signing with: $IDENTITY"

@@ -7,13 +7,22 @@ we move on only once the stage works.
 
 ### Build
 
+Full Xcode is not required; the Command Line Tools are enough.
+
 ```bash
 scripts/setup.sh --eval
 ```
 
 ```bash
+scripts/make_signing_cert.sh
+```
+
+```bash
 scripts/build_app.sh --open
 ```
+
+`make_signing_cert.sh` is a one-time step (skip it if you have an Apple Development certificate).
+It lets macOS keep the app's permissions across rebuilds; see [PERMISSIONS.md](PERMISSIONS.md).
 
 If `swift build` fails, send me the first ~30 lines of errors. This code was written without access
 to a Mac, so a first-build fix or two is expected, mainly in the Apple Speech calls.

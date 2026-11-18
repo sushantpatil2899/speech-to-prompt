@@ -28,13 +28,16 @@ On first launch the app asks for Microphone and Input Monitoring. You can also u
 
 ## Why the code signature matters
 
-macOS remembers a grant for a specific code identity. `scripts/build_app.sh` signs the app with your
-**Apple Development** certificate if you have one, and that identity stays the same across rebuilds,
-so the grants persist. Without a certificate the app is signed *ad hoc*: every rebuild has a new
-identity, and you'd have to turn the permissions off and on again after each build.
+macOS remembers a grant for a specific code identity. `scripts/build_app.sh` signs the app with a
+certificate whose identity stays the same across rebuilds, so the grants persist. It uses, in order:
 
-To get a free certificate: Xcode → Settings → Accounts → add your Apple ID → select the team
-("Personal Team") → Manage Certificates → **+** → Apple Development.
+1. An **Apple Development** certificate, if you have one (needs full Xcode: Settings → Accounts →
+   your Apple ID → Manage Certificates → **+**).
+2. **SpeechToPrompt Local Signing**, a self-signed certificate that `scripts/make_signing_cert.sh`
+   creates in your login keychain. No Xcode or Apple account needed. macOS asks for your password once,
+   to mark it as trusted for code signing.
+3. Otherwise it signs *ad hoc*. That works, but every rebuild then has a new identity, and you'd have to
+   turn the permissions off and on again after each build.
 
 ## If a permission seems stuck
 

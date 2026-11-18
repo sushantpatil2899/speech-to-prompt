@@ -35,7 +35,7 @@ say "Checking prerequisites"
 [[ "$(uname -m)" == "arm64" ]] || die "Apple Silicon required"
 MACOS_MAJOR="$(sw_vers -productVersion | cut -d. -f1)"
 (( MACOS_MAJOR >= 26 )) || die "macOS 26 or later required (found $(sw_vers -productVersion))"
-xcrun --find swift >/dev/null 2>&1 || die "Xcode is not installed or not selected (xcode-select -s /Applications/Xcode.app)"
+xcrun --find swift >/dev/null 2>&1 || die "Swift not found: install the Command Line Tools (xcode-select --install) or Xcode"
 echo "Swift: $(xcrun swift --version 2>&1 | head -1)"
 if ! command -v cmake >/dev/null; then
   command -v brew >/dev/null || die "cmake is missing; install Homebrew (https://brew.sh) or cmake"
@@ -44,39 +44,47 @@ if ! command -v cmake >/dev/null; then
 fi
 
 # 2. whisper.cpp -----------------------------------------------------------
+# Builds static libraries with CMake and packages them as an XCFramework folder by hand
+# (the same layout `xcodebuild -create-xcframework` produces), so full Xcode is not needed:
+# the Command Line Tools are enough.
 XCF="$ROOT/Vendor/whisper.xcframework"
-if [[ -d "$XCF" && $REBUILD -eq 0 ]]; then
+if [[ -f "$XCF/Info.plist" && $REBUILD -eq 0 ]]; then
   say "whisper.xcframework already built (use --rebuild-whisper to rebuild)"
 else
-  say "Building whisper.cpp v$WHISPER_VERSION (Metal, static) — takes a few minutes"
+  say "Building whisper.cpp v$WHISPER_VERSION (Metal, static) — takes a few minutes the first time"
   SRC="$ROOT/Vendor/src/whisper.cpp"
   BUILD="$ROOT/Vendor/src/build-macos"
-  STAGE="$ROOT/Vendor/src/stage"
-  if [[ ! -d "$SRC/.git" ]] || [[ "$(git -C "$SRC" describe --tags 2>/dev/null)" != "v$WHISPER_VERSION" ]]; then
-    rm -rf "$SRC"
-    git clone --depth 1 --branch "v$WHISPER_VERSION" https://github.com/ggml-org/whisper.cpp.git "$SRC"
+  MARKER="$SRC/.speechtoprompt-version"
+  if [[ ! -f "$MARKER" ]] || [[ "$(cat "$MARKER")" != "$WHISPER_VERSION" ]]; then
+    rm -rf "$SRC" "$BUILD"
+    git -c advice.detachedHead=false clone --depth 1 --branch "v$WHISPER_VERSION" \
+      https://github.com/ggml-org/whisper.cpp.git "$SRC"
+    echo "$WHISPER_VERSION" > "$MARKER"
   fi
-  rm -rf "$BUILD" "$STAGE" "$XCF"
-  cmake -S "$SRC" -B "$BUILD" \
+  (( REBUILD )) && rm -rf "$BUILD"
+  # Incremental: re-running after a failure doesn't recompile what's already built.
+  cmake -S "$SRC" -B "$BUILD" -Wno-dev \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
     -DBUILD_SHARED_LIBS=OFF \
     -DWHISPER_BUILD_EXAMPLES=OFF -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF \
-    -DWHISPER_COREML=OFF \
+    -DWHISPER_COREML=OFF -DGGML_CCACHE=OFF \
     -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
   cmake --build "$BUILD" --config Release -j "$(sysctl -n hw.ncpu)"
 
-  mkdir -p "$STAGE/include"
+  rm -rf "$XCF"
+  SLICE="$XCF/macos-arm64"
+  mkdir -p "$SLICE/Headers"
   # Combine whisper + all ggml static libraries into one.
   LIBS=()
   while IFS= read -r lib; do LIBS+=("$lib"); done < <(find "$BUILD" -name '*.a' -type f)
   (( ${#LIBS[@]} > 0 )) || die "no static libraries were built"
   echo "Combining: ${LIBS[*]##*/}"
-  libtool -static -no_warning_for_no_symbols -o "$STAGE/libwhisper.a" "${LIBS[@]}"
-  cp "$SRC/include/whisper.h" "$STAGE/include/"
-  cp "$SRC"/ggml/include/*.h "$STAGE/include/"
-  cat > "$STAGE/include/module.modulemap" <<'MAP'
+  libtool -static -no_warning_for_no_symbols -o "$SLICE/libwhisper.a" "${LIBS[@]}"
+  cp "$SRC/include/whisper.h" "$SLICE/Headers/"
+  cp "$SRC"/ggml/include/*.h "$SLICE/Headers/"
+  cat > "$SLICE/Headers/module.modulemap" <<'MAP'
 module whisper {
     header "whisper.h"
     link "c++"
@@ -87,7 +95,38 @@ module whisper {
     export *
 }
 MAP
-  xcodebuild -create-xcframework -library "$STAGE/libwhisper.a" -headers "$STAGE/include" -output "$XCF"
+  cat > "$XCF/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AvailableLibraries</key>
+	<array>
+		<dict>
+			<key>BinaryPath</key>
+			<string>libwhisper.a</string>
+			<key>HeadersPath</key>
+			<string>Headers</string>
+			<key>LibraryIdentifier</key>
+			<string>macos-arm64</string>
+			<key>LibraryPath</key>
+			<string>libwhisper.a</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>macos</string>
+		</dict>
+	</array>
+	<key>CFBundlePackageType</key>
+	<string>XFWK</string>
+	<key>XCFrameworkFormatVersion</key>
+	<string>1.0</string>
+</dict>
+</plist>
+PLIST
+  plutil -lint "$XCF/Info.plist" >/dev/null || die "generated Info.plist is invalid"
   echo "Built $XCF"
 fi
 

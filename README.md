@@ -17,10 +17,14 @@ has focus (mostly the Claude desktop app). Everything runs on your Mac; no audio
 | 4 | Context from the Claude desktop app (investigate Accessibility first) | |
 | 5 | Chrome extension | later |
 
-## Quick start (macOS 26, Apple Silicon, Xcode 26)
+## Quick start (macOS 26, Apple Silicon, Command Line Tools or Xcode)
 
 ```bash
 scripts/setup.sh --eval
+```
+
+```bash
+scripts/make_signing_cert.sh
 ```
 
 ```bash
@@ -29,6 +33,8 @@ scripts/build_app.sh --open
 
 `setup.sh` installs cmake if needed, builds whisper.cpp with Metal into `Vendor/whisper.xcframework`,
 downloads the Whisper large-v3-turbo and Silero VAD models, and (with `--eval`) creates `eval/.venv`.
+`make_signing_cert.sh` (once) creates a local signing certificate so macOS keeps the app's permissions
+across rebuilds.
 Then follow [docs/STAGE_REPORTS.md](docs/STAGE_REPORTS.md).
 
 ## Docs
@@ -68,7 +74,8 @@ Resources/          Info.plist, entitlements
   ("Thank you.") are discarded.
 - **The eval runs the app's own pipeline** (`dictate-cli transcribe`), so its numbers are what the app does.
 
-Run the tests:
+Run the tests (`swift test` needs full Xcode for XCTest; with only the Command Line Tools,
+skip it — the same core tests also run on Linux):
 
 ```bash
 swift test
