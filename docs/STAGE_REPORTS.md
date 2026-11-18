@@ -68,6 +68,12 @@ eval/.venv/bin/python eval/compare.py eval/clips
 The report opens as `eval/reports/<timestamp>.html`: per-engine WER with dropped and invented words
 counted separately, output on silence and noise clips, and latency.
 
+To list every error per clip (which words get dropped, invented or misheard):
+
+```bash
+eval/.venv/bin/python eval/errors.py --engines whisper,apple-en-IN
+```
+
 Optional runs that are worth a look:
 
 ```bash
