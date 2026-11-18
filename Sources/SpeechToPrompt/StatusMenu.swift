@@ -44,6 +44,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
         menu.addItem(disabled(statusLine()))
         menu.addItem(disabled("Raw: \(describe(config.rawHotkey))   ·   Clean: \(describe(config.cleanHotkey))"))
+        menu.addItem(disabled("Clean-mode LLM: \(controller.llmName) · \(controller.llmStatus.summary)"))
         if let problem = controller.configProblem { menu.addItem(disabled("⚠︎ \(problem)")) }
         if !controller.hotkeysActive {
             menu.addItem(disabled("⚠︎ Hotkeys inactive: grant Input Monitoring"))

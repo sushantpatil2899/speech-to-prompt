@@ -114,9 +114,9 @@ public final class Paster {
         postKey(CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
     }
 
-    /// Posts ⌘Z (used by the raw/clean toggle in stage 3).
-    static func postCommandZ() {
-        postKey(CGKeyCode(kVK_ANSI_Z), flags: .maskCommand)
+    /// Sends ⌘Z to undo the paste (used by the Cleaned/Raw toggle; check SwapGuard first).
+    public func undoLastPaste() {
+        Self.postKey(CGKeyCode(kVK_ANSI_Z), flags: .maskCommand)
     }
 
     private static func postKey(_ key: CGKeyCode, flags: CGEventFlags) {

@@ -4,11 +4,15 @@
 #   2. builds Vendor/whisper.xcframework (whisper.cpp + Metal, static) from source
 #   3. downloads the Whisper and Silero VAD models
 #   4. (with --eval) creates eval/.venv with the Python eval dependencies
+#   5. (with --llm) installs Ollama, starts it, and pulls the clean-mode model
 #
-# Usage: scripts/setup.sh [--eval] [--rebuild-whisper] [--small-model]
-#   --small-model   use ggml-large-v3-turbo-q5_0.bin (547 MB) instead of the full 1.6 GB model
+# Usage: scripts/setup.sh [--eval] [--llm] [--llm-candidates] [--rebuild-whisper] [--small-model]
+#   --small-model     use ggml-large-v3-turbo-q5_0.bin (547 MB) instead of the full 1.6 GB model
+#   --llm             Ollama + qwen3.5:9b (~6.6 GB)
+#   --llm-candidates  also pull gemma4:e4b and qwen3:8b to compare with eval/rewrite_test.py (~15 GB more)
 #
-# Network use: github.com (whisper.cpp source), huggingface.co (model files), PyPI (eval deps).
+# Network use: github.com (whisper.cpp source), huggingface.co (model files), PyPI (eval deps),
+# Homebrew and ollama.com (Ollama and model downloads).
 # Nothing here or in the app uploads audio or text.
 set -euo pipefail
 
@@ -16,12 +20,15 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WHISPER_VERSION="${WHISPER_VERSION:-1.9.5}"
 SUPPORT="$HOME/Library/Application Support/SpeechToPrompt"
 MODELS="$SUPPORT/models"
-WITH_EVAL=0; REBUILD=0; WHISPER_MODEL="ggml-large-v3-turbo.bin"
+WITH_EVAL=0; REBUILD=0; WHISPER_MODEL="ggml-large-v3-turbo.bin"; WITH_LLM=0
+LLM_MODELS=("qwen3.5:9b")
 for a in "$@"; do
   case "$a" in
     --eval) WITH_EVAL=1 ;;
     --rebuild-whisper) REBUILD=1 ;;
     --small-model) WHISPER_MODEL="ggml-large-v3-turbo-q5_0.bin" ;;
+    --llm) WITH_LLM=1 ;;
+    --llm-candidates) WITH_LLM=1; LLM_MODELS=("qwen3.5:9b" "gemma4:e4b" "qwen3:8b") ;;
     *) echo "unknown option $a"; exit 1 ;;
   esac
 done
@@ -159,6 +166,36 @@ if (( WITH_EVAL )); then
   "$PY" -m venv "$ROOT/eval/.venv"
   "$ROOT/eval/.venv/bin/pip" install --upgrade pip >/dev/null
   "$ROOT/eval/.venv/bin/pip" install -r "$ROOT/eval/requirements.txt"
+fi
+
+# 5. Local LLM -------------------------------------------------------------
+if (( WITH_LLM )); then
+  say "Local LLM (Ollama)"
+  # Privacy: Ollama must only listen on this Mac.
+  for h in "${OLLAMA_HOST:-}" "$(launchctl getenv OLLAMA_HOST 2>/dev/null || true)"; do
+    if [[ -n "$h" && "$h" != 127.0.0.1* && "$h" != localhost* && "$h" != "http://127.0.0.1"* && "$h" != "http://localhost"* ]]; then
+      die "OLLAMA_HOST=$h makes Ollama reachable from other machines. Unset it (launchctl unsetenv OLLAMA_HOST) and rerun."
+    fi
+  done
+  if ! command -v ollama >/dev/null; then
+    command -v brew >/dev/null || die "install Ollama from https://ollama.com/download or install Homebrew"
+    brew install ollama
+  fi
+  if ! curl -s --max-time 2 http://127.0.0.1:11434/api/version >/dev/null; then
+    if brew list ollama >/dev/null 2>&1; then
+      echo "Starting Ollama as a background service (starts at login too)…"
+      brew services start ollama
+    else
+      open -a Ollama || die "start the Ollama app, then rerun"
+    fi
+    for _ in $(seq 1 30); do curl -s --max-time 1 http://127.0.0.1:11434/api/version >/dev/null && break; sleep 1; done
+    curl -s --max-time 2 http://127.0.0.1:11434/api/version >/dev/null || die "Ollama didn't start"
+  fi
+  echo "Ollama $(curl -s http://127.0.0.1:11434/api/version | sed 's/.*"version":"\([^"]*\)".*/\1/') is running on 127.0.0.1:11434"
+  for m in "${LLM_MODELS[@]}"; do
+    echo "Pulling $m…"
+    ollama pull "$m"
+  done
 fi
 
 say "Done. Next: scripts/build_app.sh"

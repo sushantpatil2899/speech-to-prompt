@@ -5,7 +5,7 @@ import SwiftUI
 struct OverlayView: View {
     @ObservedObject var model: OverlayModel
 
-    static let cardSize = CGSize(width: 248, height: 56)
+    static let cardSize = CGSize(width: 300, height: 56)
 
     var body: some View {
         HStack(spacing: 10) {
@@ -43,6 +43,39 @@ struct OverlayView: View {
                     .foregroundStyle(.secondary)
             }
 
+        case .rewriting:
+            SpinnerRing()
+                .frame(width: 26, height: 26)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Cleaning up…")
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Local LLM")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+        case .cleanDone(let outcome):
+            Image(systemName: outcome.showing == .cleaned ? "checkmark.circle.fill" : "text.badge.checkmark")
+                .font(.system(size: 20))
+                .foregroundStyle(outcome.showing == .cleaned ? Color.green : Color.blue)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(outcome.currentText)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(outcome.detail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VersionToggle(
+                showing: outcome.showing,
+                cleanedAvailable: outcome.cleaned != nil,
+                cleanedRejected: outcome.cleanedRejected
+            ) { version in model.onSelectVersion?(version) }
+
         case .done(_, let text, let detail):
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 22))
@@ -67,6 +100,43 @@ struct OverlayView: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+/// Two-segment Clean / Raw switch. Clicking the other side swaps the pasted text.
+private struct VersionToggle: View {
+    let showing: OverlayModel.Version
+    let cleanedAvailable: Bool
+    let cleanedRejected: Bool
+    let select: (OverlayModel.Version) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            segment("Clean", .cleaned, enabled: cleanedAvailable)
+                .help(cleanedRejected ? "The cleaned text failed a safety check; raw was pasted" : "Cleaned by the local LLM")
+            segment("Raw", .raw, enabled: true)
+                .help("Exactly what was transcribed")
+        }
+        .padding(2)
+        .background(Capsule().fill(Color.primary.opacity(0.08)))
+        .fixedSize()
+    }
+
+    private func segment(_ title: String, _ version: OverlayModel.Version, enabled: Bool) -> some View {
+        let selected = showing == version
+        return Button {
+            if !selected { select(version) }
+        } label: {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .foregroundStyle(selected ? Color.white : (enabled ? Color.primary : Color.secondary))
+                .background(Capsule().fill(selected ? Color.accentColor : Color.clear))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 }
 

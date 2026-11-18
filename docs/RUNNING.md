@@ -38,12 +38,36 @@ Each transcript also goes to:
    python3 tools/latency_report.py
    ```
 
+## Clean mode
+
+The transcript goes to a local model through Ollama (`127.0.0.1:11434`, never anywhere else; the app
+refuses other addresses and Ollama's `-cloud` models). The prompt tells the model to *rewrite only*:
+the transcript sits between `<transcript>` tags, and questions, commands and "ignore your
+instructions" inside it are rewritten, never answered or followed.
+
+Before pasting, guardrails check the output. If any check fails, or Ollama doesn't answer within
+3 s, the **raw transcript is pasted** instead and the overlay says why:
+
+- empty output, or it starts like a reply ("Sure", "Here's")
+- much longer than what you said (it answered or added content)
+- several words you never said
+- it kept too little of what you said (it obeyed the dictation instead of rewriting it)
+- it dropped a number, name, identifier, file name or command flag
+
+The overlay's **Clean | Raw** toggle swaps the pasted text: ⌘Z, then it pastes the other version. It does
+this only if the same field still has focus and you haven't typed or clicked since. Otherwise it puts
+the other version on the clipboard for you to paste.
+
+The model is loaded into memory when the app starts and stays loaded (`keep_alive: -1`), about 7 GB of
+RAM for `qwen3.5:9b`. To free it: `ollama stop qwen3.5:9b` (the app reloads it on its next start or
+after a failed request).
+
 ## Hotkeys
 
 | Mode | Default key | Behavior |
 |---|---|---|
 | Raw | **Right ⌥** (hold) | Transcribe → paste |
-| Clean | **Right ⌘** (hold) | Transcribe → LLM rewrite (stage 3) → paste. Until stage 3 it pastes the raw transcript. |
+| Clean | **Right ⌘** (hold) | Transcribe → local LLM rewrite → paste, then a **Clean / Raw** toggle on the overlay for 30 s |
 
 - **Hold:** recording starts the instant the key goes down and stops on release. Presses shorter than
   0.2 s are ignored (accidental taps).
@@ -89,7 +113,17 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
   "autoPaste": true,
   "pasteRestoreDelaySeconds": 0.35,
   "showOverlay": true,
-  "overlayDoneSeconds": 1.5
+  "overlayDoneSeconds": 1.5,
+  "cleanToggleSeconds": 30,
+  "llm": {
+    "enabled": true,
+    "baseURL": "http://127.0.0.1:11434",
+    "model": "qwen3.5:9b",
+    "timeoutSeconds": 3.0,
+    "disableThinking": true,
+    "temperature": 0,
+    "contextTokens": 4096
+  }
 }
 ```
 
@@ -106,6 +140,10 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
 | `autoPaste` | `true`: paste with ⌘V and restore your clipboard. `false`: only put the text on the clipboard. |
 | `pasteRestoreDelaySeconds` | Wait after ⌘V before restoring your clipboard. Raise it if an app sometimes pastes your *old* clipboard instead of the dictation. |
 | `showOverlay`, `overlayDoneSeconds` | The top-right overlay, and how long its "done" state stays up. |
+| `cleanToggleSeconds` | How long the clean-mode card with the Clean / Raw toggle stays up. |
+| `llm.model` | Any local Ollama model (`ollama list`). Cloud models are refused. |
+| `llm.timeoutSeconds` | After this the raw transcript is pasted. Raise it for long dictations if you'd rather wait. |
+| `llm.disableThinking` | Sends `think: false` so reasoning models answer directly (much faster). |
 
 ## Files
 

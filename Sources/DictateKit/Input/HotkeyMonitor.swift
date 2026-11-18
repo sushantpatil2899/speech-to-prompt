@@ -10,8 +10,11 @@ import Foundation
 public final class HotkeyMonitor {
     /// Called on the main thread.
     public var onInput: ((HotkeyInput) -> Void)?
-    /// Called on the main thread for every non-repeat key-down (used later to detect typing after a paste).
+    /// Called on the main thread for every non-repeat key-down (used to detect typing after a paste).
     public var onAnyKeyDown: (() -> Void)?
+    /// Called on the main thread for every mouse-button press, with its location in global
+    /// CoreGraphics coordinates (used to detect clicks after a paste).
+    public var onMouseDown: ((CGPoint) -> Void)?
 
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
@@ -35,6 +38,9 @@ public final class HotkeyMonitor {
         if tap != nil { return true }
         let mask = (CGEventMask(1) << CGEventType.flagsChanged.rawValue)
             | (CGEventMask(1) << CGEventType.keyDown.rawValue)
+            | (CGEventMask(1) << CGEventType.leftMouseDown.rawValue)
+            | (CGEventMask(1) << CGEventType.rightMouseDown.rawValue)
+            | (CGEventMask(1) << CGEventType.otherMouseDown.rawValue)
         let callback: CGEventTapCallBack = { _, type, event, refcon in
             if let refcon {
                 let monitor = Unmanaged<HotkeyMonitor>.fromOpaque(refcon).takeUnretainedValue()
@@ -110,6 +116,9 @@ public final class HotkeyMonitor {
             let code = event.getIntegerValueField(.keyboardEventKeycode)
             onAnyKeyDown?()
             onInput?(code == 53 ? .escape(time: now) : .otherKeyDown(time: now))
+
+        case .leftMouseDown, .rightMouseDown, .otherMouseDown:
+            onMouseDown?(event.location)
 
         default:
             break

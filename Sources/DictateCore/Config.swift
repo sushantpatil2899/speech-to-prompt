@@ -140,6 +140,54 @@ public struct VADConfig: Codable, Equatable, Sendable {
     }
 }
 
+/// The clean-mode LLM (Ollama).
+public struct LLMConfig: Codable, Equatable, Sendable {
+    public var enabled: Bool = true
+    /// Must be this Mac (127.0.0.1 / localhost / ::1); anything else is refused.
+    public var baseURL: String = "http://127.0.0.1:11434"
+    public var model: String = "qwen3.5:9b"
+    /// Total time allowed for the rewrite; after this the raw transcript is pasted.
+    public var timeoutSeconds: Double = 3.0
+    /// Send `think: false` (hybrid reasoning models would otherwise think first, which is slow).
+    public var disableThinking: Bool = true
+    public var temperature: Double = 0
+    public var contextTokens: Int = 4096
+
+    public init() {}
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = LLMConfig()
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? d.enabled
+        baseURL = try c.decodeIfPresent(String.self, forKey: .baseURL) ?? d.baseURL
+        model = try c.decodeIfPresent(String.self, forKey: .model) ?? d.model
+        timeoutSeconds = try c.decodeIfPresent(Double.self, forKey: .timeoutSeconds) ?? d.timeoutSeconds
+        disableThinking = try c.decodeIfPresent(Bool.self, forKey: .disableThinking) ?? d.disableThinking
+        temperature = try c.decodeIfPresent(Double.self, forKey: .temperature) ?? d.temperature
+        contextTokens = try c.decodeIfPresent(Int.self, forKey: .contextTokens) ?? d.contextTokens
+    }
+
+    /// True if baseURL points at this machine.
+    public var isLocal: Bool {
+        guard let host = URLComponents(string: baseURL)?.host?.lowercased() else { return false }
+        return ["127.0.0.1", "localhost", "::1", "[::1]"].contains(host)
+    }
+
+    /// Ollama "cloud" models run on Ollama's servers, which would send your text off this Mac.
+    public var isCloudModel: Bool {
+        let m = model.lowercased()
+        return m.hasSuffix("-cloud") || m.hasSuffix(":cloud") || m.contains("-cloud:")
+    }
+
+    public func problems() -> [String] {
+        var p: [String] = []
+        if !isLocal { p.append("llm.baseURL must be on this Mac (127.0.0.1); got \(baseURL).") }
+        if isCloudModel { p.append("llm.model \(model) is an Ollama cloud model, which would send text off this Mac.") }
+        if timeoutSeconds <= 0 { p.append("llm.timeoutSeconds must be > 0.") }
+        return p
+    }
+}
+
 /// Everything in ~/Library/Application Support/SpeechToPrompt/config.json.
 /// Every field is optional in the file; missing fields take the defaults below.
 public struct AppConfig: Codable, Equatable, Sendable {
@@ -174,6 +222,9 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var showOverlay: Bool = true
     /// How long the overlay's "done" state stays up in raw mode.
     public var overlayDoneSeconds: Double = 1.5
+    public var llm = LLMConfig()
+    /// Clean mode: how long the overlay keeps the Cleaned / Raw toggle available.
+    public var cleanToggleSeconds: Double = 30
 
     public init() {}
 
@@ -200,6 +251,8 @@ public struct AppConfig: Codable, Equatable, Sendable {
         pasteRestoreDelaySeconds = try c.decodeIfPresent(Double.self, forKey: .pasteRestoreDelaySeconds) ?? d.pasteRestoreDelaySeconds
         showOverlay = try c.decodeIfPresent(Bool.self, forKey: .showOverlay) ?? d.showOverlay
         overlayDoneSeconds = try c.decodeIfPresent(Double.self, forKey: .overlayDoneSeconds) ?? d.overlayDoneSeconds
+        llm = try c.decodeIfPresent(LLMConfig.self, forKey: .llm) ?? d.llm
+        cleanToggleSeconds = try c.decodeIfPresent(Double.self, forKey: .cleanToggleSeconds) ?? d.cleanToggleSeconds
     }
 
     /// Problems that make the config unusable.
@@ -211,6 +264,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
         if engine.whisperBeamSize < 0 { errors.append("engine.whisperBeamSize must be >= 0.") }
         if maxRecordingSeconds <= 0 { errors.append("maxRecordingSeconds must be > 0.") }
         if vad.minSpeechSeconds < 0 { errors.append("vad.minSpeechSeconds must be >= 0.") }
+        errors += llm.problems()
         if pasteRestoreDelaySeconds < 0.05 || pasteRestoreDelaySeconds > 5 {
             errors.append("pasteRestoreDelaySeconds must be between 0.05 and 5.")
         }

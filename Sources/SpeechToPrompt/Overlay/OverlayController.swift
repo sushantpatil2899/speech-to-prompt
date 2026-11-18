@@ -9,6 +9,12 @@ final class OverlayPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+/// Hosting view that takes the first click even though its window is never key, so the
+/// Clean / Raw toggle responds to a single click without activating this app.
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 /// Shows and hides the overlay in the top-right corner of the screen you're working on.
 @MainActor
 final class OverlayController {
@@ -37,6 +43,29 @@ final class OverlayController {
         set(.processing(mode))
     }
 
+    func showRewriting() {
+        set(.rewriting)
+    }
+
+    /// Clean mode result with the toggle; stays up for `seconds`.
+    func showCleanDone(_ outcome: OverlayModel.CleanOutcome, seconds: Double) {
+        set(.cleanDone(outcome))
+        hide(after: seconds)
+    }
+
+    /// Updates the clean-mode card in place (after a toggle) and restarts its timer.
+    func updateCleanDone(_ outcome: OverlayModel.CleanOutcome, seconds: Double) {
+        guard case .cleanDone = model.phase else { return }
+        showCleanDone(outcome, seconds: seconds)
+    }
+
+    /// The card's frame in Cocoa screen coordinates while visible (clicks there don't count
+    /// as "you clicked elsewhere").
+    var visibleFrame: NSRect? {
+        guard let panel, panel.isVisible else { return nil }
+        return panel.frame
+    }
+
     func showDone(_ mode: DictationMode, text: String, detail: String? = nil) {
         set(.done(mode, text: text, detail: detail))
         hide(after: doneSeconds)
@@ -63,6 +92,8 @@ final class OverlayController {
         guard enabled else { return }
         model.phase = phase
         present()
+        // Only the clean-mode card has buttons; otherwise let clicks pass through to what's below.
+        if case .cleanDone = phase { panel?.ignoresMouseEvents = false } else { panel?.ignoresMouseEvents = true }
     }
 
     private func present() {
@@ -106,9 +137,9 @@ final class OverlayController {
         panel.isOpaque = false
         panel.hasShadow = false        // SwiftUI draws the shadow
         panel.hidesOnDeactivate = false
-        panel.ignoresMouseEvents = true // no buttons until stage 3's raw/clean toggle
+        panel.ignoresMouseEvents = true  // switched off only while the Clean / Raw toggle is shown
         panel.isReleasedWhenClosed = false
-        let host = NSHostingView(rootView: OverlayView(model: model))
+        let host = FirstMouseHostingView(rootView: OverlayView(model: model))
         host.frame = NSRect(origin: .zero, size: size)
         panel.contentView = host
         return panel

@@ -12,8 +12,8 @@ has focus (mostly the Claude desktop app). Everything runs on your Mac; no audio
 | Stage | What | State |
 |---|---|---|
 | 1 | Hotkeys, recording, VAD gate, transcription (whisper.cpp / Apple SpeechAnalyzer), engine comparison | **Built and measured: Whisper large-v3-turbo with beam search, 7.0% WER, ~0.4 s** |
-| 2 | Paste into the focused field (clipboard save/restore), overlay | **Built, waiting for your verification** |
-| 3 | Local LLM cleanup (Ollama), rewrite-only prompt, guardrails and fallback, raw/clean toggle | |
+| 2 | Paste into the focused field (clipboard save/restore), overlay | **Verified: ~0.55 s key release → pasted** |
+| 3 | Local LLM cleanup (Ollama), rewrite-only prompt, guardrails and fallback, raw/clean toggle | **Built, waiting for your verification** |
 | 4 | Context from the Claude desktop app (investigate Accessibility first) | |
 | 5 | Chrome extension | later |
 
@@ -49,13 +49,15 @@ Then follow [docs/STAGE_REPORTS.md](docs/STAGE_REPORTS.md).
 Package.swift
 Sources/
   DictateCore/      pure Swift, unit-tested (also on Linux): config, hotkey state machine,
-                    VAD gate, transcript cleanup, latency timer, history log, WAV
+                    VAD gate, transcript cleanup, rewrite prompt + guardrails, latency, history, WAV
   DictateKit/       macOS: audio recorder, STT engines (whisper.cpp, Apple), Silero VAD,
-                    event-tap hotkeys, paster (clipboard + ⌘V + restore), permissions
+                    event-tap hotkeys, paster (clipboard + ⌘V + restore), Ollama client,
+                    swap guard (Clean/Raw toggle), permissions
   SpeechToPrompt/   the menu bar app and its overlay
   dictate-cli/      record eval clips; run the app's pipeline on files
 Tests/DictateCoreTests
-eval/               prompts.txt, compare.py (engine comparison report), metrics.py
+eval/               prompts.txt, compare.py (engine comparison), errors.py,
+                    rewrite_cases.jsonl + rewrite_test.py (clean-mode model test)
 tools/              latency_report.py
 scripts/            setup.sh, build_app.sh
 Resources/          Info.plist, entitlements

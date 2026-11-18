@@ -62,7 +62,8 @@ menu), macOS hides keystrokes from every event tap, so the hotkeys won't fire. T
 
 ## What leaves the machine
 
-Nothing at runtime: the app makes no network requests in stage 1. (From stage 3 it talks to Ollama at
-`127.0.0.1` only.) One-time downloads happen in `scripts/setup.sh` (whisper.cpp source from GitHub,
-model files from Hugging Face) and, for the Apple engine, macOS downloads the speech model for your
+Nothing. The app's only network traffic is to Ollama on `127.0.0.1` (clean mode), and it refuses any
+other LLM address and Ollama's cloud models. `scripts/setup.sh` checks that Ollama isn't configured to
+listen beyond this Mac (`OLLAMA_HOST`). One-time downloads happen in `scripts/setup.sh` (whisper.cpp source from GitHub,
+model files from Hugging Face, Ollama and its models from Homebrew / ollama.com) and, for the Apple engine, macOS downloads the speech model for your
 locale from Apple the first time.

@@ -2,6 +2,7 @@
 //
 //   dictate-cli record --prompts eval/prompts.txt --out eval/clips [--overwrite] [--only N]
 //   dictate-cli transcribe --engine whisper|apple|apple-dictation [options] FILE...
+//   dictate-cli rewrite [--model M] [--text "..."] [--json]   (clean-mode LLM, same code as the app)
 //   dictate-cli locales
 //   dictate-cli vad FILE...
 //
@@ -33,6 +34,11 @@ usage:
       --no-vad          skip the VAD gate (to see raw hallucination behaviour)
       --vocab "a,b,c"   vocabulary hint (default from config)
       --json            one JSON object per line (used by eval/compare.py)
+
+  dictate-cli rewrite [--model NAME] [--timeout S] [--text "..."] [--json]
+      Runs the clean-mode rewrite (prompt + local Ollama + guardrails) exactly as the app does.
+      Without --text, reads one transcript per stdin line (plain text, or JSON {"id","transcript"}).
+      --timeout S       per-request limit (default from config, 3 s); a timeout = raw fallback in the app
 
   dictate-cli locales
       Lists Apple speech locales supported / installed on this Mac.
@@ -156,6 +162,85 @@ func runTranscribe(_ args: Args) async {
                 print(jsonLine(["file": path, "engine": engine.name, "error": String(describing: error)]))
             } else {
                 eprint("\(path): \(error)")
+            }
+        }
+    }
+}
+
+func runRewrite(_ args: Args) async {
+    var config = loadConfig()
+    if let m = args.options["model"] { config.llm.model = m }
+    if let t = args.options["timeout"], let v = Double(t) { config.llm.timeoutSeconds = v }
+    config.llm.enabled = true
+    let json = args.flags.contains("json")
+    if let problem = config.llm.problems().first { fail(problem) }
+
+    let rewriter = OllamaRewriter(config: config.llm)
+    let status = await rewriter.status()
+    guard status == .ready else {
+        if json { print(jsonLine(["event": "error", "model": config.llm.model, "error": status.summary])) }
+        fail("\(rewriter.name): \(status.summary)")
+    }
+    let t0 = LatencyTimer.now()
+    do { try await rewriter.warmUp() } catch {
+        if json { print(jsonLine(["event": "error", "model": config.llm.model, "error": String(describing: error)])) }
+        fail("warm-up failed: \(error)")
+    }
+    let warmMS = Int((LatencyTimer.now() - t0) * 1000)
+    if json {
+        print(jsonLine(["event": "ready", "model": config.llm.model, "warmup_ms": warmMS]))
+    } else {
+        eprint("\(rewriter.name) ready (warm-up \(warmMS) ms)")
+    }
+
+    var inputs: [(id: String, text: String)] = []
+    if let text = args.options["text"] {
+        inputs.append(("text", text))
+    } else {
+        var n = 0
+        while let line = readLine() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { continue }
+            n += 1
+            if trimmed.hasPrefix("{"),
+               let obj = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8)) as? [String: Any],
+               let t = obj["transcript"] as? String {
+                inputs.append(((obj["id"] as? String) ?? String(n), t))
+            } else {
+                inputs.append((String(n), trimmed))
+            }
+        }
+    }
+
+    for input in inputs {
+        do {
+            let r = try await rewriter.rewrite(input.text)
+            var verdict = "accept", reason = "", cleaned = "", finalText = input.text
+            switch r.verdict {
+            case .accept(let t): cleaned = t; finalText = t
+            case .reject(let why, let out): verdict = "reject"; reason = why; cleaned = out
+            }
+            if json {
+                var obj: [String: Any] = [
+                    "id": input.id, "model": config.llm.model, "transcript": input.text,
+                    "model_output": r.modelOutput, "cleaned": cleaned, "verdict": verdict, "final": finalText,
+                    "ms": r.milliseconds,
+                ]
+                if !reason.isEmpty { obj["reason"] = reason }
+                if let n = r.outputTokens { obj["output_tokens"] = n }
+                if let n = r.promptTokens { obj["prompt_tokens"] = n }
+                print(jsonLine(obj))
+            } else {
+                print("[\(input.id)] \(Int(r.milliseconds)) ms  \(verdict)\(reason.isEmpty ? "" : " (\(reason))")")
+                print("  said:    \(input.text)")
+                print("  cleaned: \(cleaned)")
+            }
+        } catch {
+            if json {
+                print(jsonLine(["id": input.id, "model": config.llm.model, "transcript": input.text,
+                                "error": String(describing: error), "final": input.text]))
+            } else {
+                print("[\(input.id)] ERROR \(error) → raw would be pasted")
             }
         }
     }
@@ -285,6 +370,8 @@ case "transcribe":
     await runTranscribe(Args(argv, valued: ["engine", "locale", "model", "beam", "vocab"]))
 case "record":
     await runRecord(Args(argv, valued: ["prompts", "out", "only"]))
+case "rewrite":
+    await runRewrite(Args(argv, valued: ["model", "timeout", "text"]))
 case "locales":
     print(await AppleSpeechEngine.localeReport())
 case "vad":
