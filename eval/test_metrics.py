@@ -42,6 +42,28 @@ class AlignTests(unittest.TestCase):
         self.assertEqual([o.kind for o in ops], ["equal", "sub", "equal", "ins"])
 
 
+class CompoundTests(unittest.TestCase):
+    def test_split_in_hypothesis(self):
+        s = score("send it before the standup", "send it before the stand up", use_whisper_normalizer=False)
+        self.assertEqual(s.errors, 0)
+
+    def test_split_in_reference(self):
+        s = score("add a log line", "add a logline", use_whisper_normalizer=False)
+        self.assertEqual(s.errors, 0)
+
+    def test_three_way_split(self):
+        s = score("the oomkilled error", "the o om killed error", use_whisper_normalizer=False)
+        self.assertEqual(s.errors, 0)
+
+    def test_real_errors_still_count(self):
+        s = score("the pod keeps crashing", "the port keeps crashing", use_whisper_normalizer=False)
+        self.assertEqual(s.substitutions, 1)
+
+    def test_strict_mode(self):
+        s = score("the standup", "the stand up", use_whisper_normalizer=False, compounds=False)
+        self.assertEqual(s.errors, 2)
+
+
 class HelperTests(unittest.TestCase):
     def test_basic_normalize(self):
         self.assertEqual(basic_normalize("Don’t  STOP—now!"), "don't stop now")

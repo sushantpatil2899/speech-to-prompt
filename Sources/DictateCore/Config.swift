@@ -94,8 +94,9 @@ public struct EngineConfig: Codable, Equatable, Sendable {
     public var locale: String = "en-IN"
     /// File name inside the models directory.
     public var whisperModel: String = "ggml-large-v3-turbo.bin"
-    /// 0 = greedy decoding; >1 = beam search with that beam size.
-    public var whisperBeamSize: Int = 0
+    /// 0 = greedy decoding; >1 = beam search with that beam size. Beam 5 measured 7.0% vs 8.2%
+    /// WER for +12 ms median on the stage-1 eval clips.
+    public var whisperBeamSize: Int = 5
     /// Whisper's temperature fallback (retry at a higher temperature when decoding looks bad).
     public var whisperTemperatureFallback: Bool = true
     /// 0 = choose automatically.

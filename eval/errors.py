@@ -28,6 +28,7 @@ def main() -> None:
     ap.add_argument("report", nargs="?", type=Path, help="a compare.py .json (default: newest in eval/reports)")
     ap.add_argument("--engines", help="comma-separated labels (default: all in the report)")
     ap.add_argument("--basic-normalizer", action="store_true")
+    ap.add_argument("--strict", action="store_true", help="count split/joined compounds as errors")
     args = ap.parse_args()
 
     report = args.report
@@ -57,7 +58,7 @@ def main() -> None:
             if "error" in r:
                 print(f"  {Path(file).stem}  ERROR {r['error']}")
                 continue
-            sc = metrics.score(ref, r.get("text", ""), use_whisper_norm)
+            sc = metrics.score(ref, r.get("text", ""), use_whisper_norm, not args.strict)
             if sc.errors == 0:
                 continue
             parts = []

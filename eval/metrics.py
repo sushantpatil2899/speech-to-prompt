@@ -106,9 +106,39 @@ def align(ref: list[str], hyp: list[str]) -> list[Op]:
     return ops
 
 
-def score(reference: str, hypothesis: str, use_whisper_normalizer: bool = True) -> Score:
+def merge_compounds(ref: list[str], hyp: list[str]) -> tuple[list[str], list[str]]:
+    """Treat a word written split in one text and joined in the other as the same word.
+
+    "stand up" vs "standup", "OOM killed" vs "OOMKilled", "log line" vs "logline" are spacing
+    choices, not recognition errors, but plain WER counts each as two errors. Runs of 2-3
+    words are joined when the joined form appears as a single word on the other side.
+    """
+
+    def join(tokens: list[str], targets: set[str]) -> list[str]:
+        out, i = [], 0
+        while i < len(tokens):
+            for k in (3, 2):
+                joined = "".join(tokens[i:i + k])
+                if i + k <= len(tokens) and joined in targets:
+                    out.append(joined)
+                    i += k
+                    break
+            else:
+                out.append(tokens[i])
+                i += 1
+        return out
+
+    hyp = join(hyp, set(ref))
+    ref = join(ref, set(hyp))
+    return ref, hyp
+
+
+def score(reference: str, hypothesis: str, use_whisper_normalizer: bool = True,
+          compounds: bool = True) -> Score:
     ref = normalize(reference, use_whisper_normalizer).split()
     hyp = normalize(hypothesis, use_whisper_normalizer).split()
+    if compounds:
+        ref, hyp = merge_compounds(ref, hyp)
     ops = align(ref, hyp)
     return Score(
         ref_words=len(ref),

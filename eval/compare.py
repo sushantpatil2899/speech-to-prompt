@@ -127,7 +127,7 @@ def run_mlx(files: list[Path], gate: dict[str, dict], model: str, vocab: list[st
     return results
 
 
-def summarize(label: str, clips, results: dict[str, dict], whisper_norm: bool) -> dict:
+def summarize(label: str, clips, results: dict[str, dict], whisper_norm: bool, compounds: bool = True) -> dict:
     s = dict(label=label, engine=None, clips=0, ref_words=0, sub=0, dele=0, ins=0,
              silent_clips=0, silent_halluc=0, errors=0, latencies=[], audio_s=0.0, stt_s=0.0)
     for wav, ref in clips:
@@ -136,7 +136,7 @@ def summarize(label: str, clips, results: dict[str, dict], whisper_norm: bool) -
             s["errors"] += 1
             continue
         s["engine"] = s["engine"] or r.get("engine")
-        sc = metrics.score(ref, r.get("text", ""), whisper_norm)
+        sc = metrics.score(ref, r.get("text", ""), whisper_norm, compounds)
         r["score"] = sc
         s["clips"] += 1
         if sc.ref_words == 0:
@@ -261,6 +261,7 @@ def main():
     ap.add_argument("--vocab", default="", help="comma-separated vocabulary hint passed to every engine")
     ap.add_argument("--no-vad", action="store_true", help="disable the VAD gate")
     ap.add_argument("--basic-normalizer", action="store_true", help="lowercase/punctuation only, instead of Whisper's normalizer")
+    ap.add_argument("--strict", action="store_true", help="count split/joined compounds (stand up vs standup) as errors")
     ap.add_argument("--out", type=Path, default=ROOT / "eval" / "reports")
     args = ap.parse_args()
     args.cli = args.cli.expanduser().resolve()
@@ -293,8 +294,9 @@ def main():
 
     whisper_norm = not args.basic_normalizer
     normalizer = metrics.normalizer_name() if whisper_norm else "basic"
+    normalizer += "; strict compounds" if args.strict else "; split/joined compounds not counted"
     # Engines that produced nothing at all and aren't dictate-cli engines (mlx not installed) are left out.
-    summaries = [summarize(l, clips, all_results[l], whisper_norm) for l in labels
+    summaries = [summarize(l, clips, all_results[l], whisper_norm, not args.strict) for l in labels
                  if l in all_results and (all_results[l] or ENGINES[l] is not None)]
 
     args.out.mkdir(parents=True, exist_ok=True)

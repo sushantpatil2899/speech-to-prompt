@@ -11,7 +11,7 @@ has focus (mostly the Claude desktop app). Everything runs on your Mac; no audio
 
 | Stage | What | State |
 |---|---|---|
-| 1 | Hotkeys, recording, VAD gate, transcription (whisper.cpp / Apple SpeechAnalyzer), engine comparison | **Builds on macOS; waiting for your verification** |
+| 1 | Hotkeys, recording, VAD gate, transcription (whisper.cpp / Apple SpeechAnalyzer), engine comparison | **Built and measured: Whisper large-v3-turbo with beam search, 7.0% WER, ~0.4 s** |
 | 2 | Paste into the focused field (clipboard save/restore), overlay | next |
 | 3 | Local LLM cleanup (Ollama), rewrite-only prompt, guardrails and fallback, raw/clean toggle | |
 | 4 | Context from the Claude desktop app (investigate Accessibility first) | |

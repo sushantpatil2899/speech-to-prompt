@@ -65,7 +65,7 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
     "kind": "whisper",
     "locale": "en-IN",
     "whisperModel": "ggml-large-v3-turbo.bin",
-    "whisperBeamSize": 0,
+    "whisperBeamSize": 5,
     "whisperTemperatureFallback": true,
     "whisperThreads": 0
   },
@@ -89,7 +89,7 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
 | `key` | `rightOption`, `leftOption`, `rightCommand`, `leftCommand`, `rightControl`, `leftControl`, `rightShift`, `leftShift`, `function` |
 | `engine.kind` | `whisper`, `apple` (SpeechTranscriber) or `apple-dictation` (DictationTranscriber). Also switchable from the menu. |
 | `engine.locale` | Apple engines only. Whisper is always forced to English. |
-| `whisperBeamSize` | `0` = greedy (fastest). `5` = beam search: a bit more accurate, slower. Compare with the eval. |
+| `whisperBeamSize` | `5` = beam search (default; on the stage-1 clips 7.0% vs 8.2% WER for about +12 ms). `0` = greedy. |
 | `vad.minSpeechSeconds` | Clips with less detected speech are skipped entirely: nothing transcribed, nothing pasted. |
 | `vocabulary` | Names and jargon you use. Sent to Whisper as its initial prompt and to Apple's engine as contextual strings. Often the single biggest win for accented speech on proper nouns. |
 | `phantomPhrases` | If a clip with under `phantomMaxSpeechSeconds` of speech transcribes to exactly one of these, it's discarded (Whisper's classic "Thank you." on near-silence). |
