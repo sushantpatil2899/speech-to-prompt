@@ -1,0 +1,4 @@
+# Eval-only dependencies (the app itself has no Python).
+whisper-normalizer==1.0.1   # Whisper's English text normalizer, for fair WER
+mlx-whisper==0.4.3          # extra candidate engine (pulls in mlx and torch, ~1 GB)
+numpy

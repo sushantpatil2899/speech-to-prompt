@@ -1,0 +1,19 @@
+# SwiftPM / build output
+.build/
+.swiftpm/
+build/
+*.xcodeproj/
+DerivedData/
+
+# Built by scripts/setup.sh
+Vendor/whisper.xcframework/
+Vendor/src/
+
+# Eval data stays local (your voice)
+eval/clips/
+eval/reports/
+eval/.venv/
+__pycache__/
+*.pyc
+
+.DS_Store

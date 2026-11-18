@@ -1,0 +1,43 @@
+# Prompts for `dictate-cli record`. One clip per line.
+# Speak naturally, the way you'd dictate to Claude. If you deviate from the text,
+# edit that clip's .txt afterwards so the reference matches what you actually said.
+# Add your own lines: real messages you send are the best test material.
+
+# Short messages (raw mode, speed)
+Yes, go ahead.
+Looks good, ship it.
+Can you explain that again more simply?
+No, use the second option instead.
+
+# Technical vocabulary and identifiers
+Refactor the useEffect hook so it doesn't re-render on every keystroke.
+Write a pytest fixture that spins up a PostgreSQL container for the integration tests.
+The Kubernetes pod keeps crashing with an OOMKilled error after about ten minutes.
+Add OAuth login with GitHub and store the refresh token in the macOS Keychain.
+Why does npm install fail with a peer dependency conflict on React nineteen?
+Convert this JSON schema to a TypeScript interface and make the email field optional.
+
+# Numbers, versions, units
+Set the timeout to thirty seconds and retry at most three times.
+We're on Python three point twelve, the server listens on port eight thousand eighty.
+The latency went from four hundred milliseconds to one point two seconds after the last deploy.
+Increase the batch size to sixty four and lower the learning rate to three e minus four.
+
+# Names and places
+Send the summary to Priya and Raghav before the Thursday standup.
+Book a table for four in Bengaluru near Indiranagar for Saturday evening.
+
+# Fillers, false starts, self-corrections (what clean mode will fix)
+So um I want you to, like, write a function that, uh, parses the CSV file and returns a list of dictionaries.
+Make the button blue, no wait, make it green, and put it on the right side.
+Can you can you check whether the the migration script handles null values?
+
+# Longer, natural dictation (~20-30 s)
+I'm working on a small macOS app that listens to my voice and pastes the text into whatever window is focused. The problem is that it sometimes drops words at the end of a sentence, and sometimes it adds words I never said, especially when there's background noise. Can you suggest how to measure this properly?
+Okay so here's the situation, the API returns a four twenty nine when we send more than a hundred requests a minute, and right now we just fail. I'd like exponential backoff with jitter, a maximum of five retries, and a log line every time we back off.
+
+# Hallucination checks: no speech at all (reference is empty)
+[silence 5]
+[silence 3]
+[noise 5: type on your keyboard]
+[noise 5: tap the desk or move your chair, no speech]

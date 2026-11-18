@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>local.SpeechToPrompt.cli</string>
+	<key>CFBundleName</key>
+	<string>dictate-cli</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>dictate-cli records evaluation clips from your microphone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>dictate-cli uses Apple's on-device speech recognition to transcribe evaluation clips.</string>
+</dict>
+</plist>
