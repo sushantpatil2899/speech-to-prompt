@@ -193,7 +193,7 @@ if (( WITH_LLM )); then
   fi
   echo "Ollama $(curl -s http://127.0.0.1:11434/api/version | sed 's/.*"version":"\([^"]*\)".*/\1/') is running on 127.0.0.1:11434"
   for m in "${LLM_MODELS[@]}"; do
-    echo "Pulling $m…"
+    echo "Pulling ${m}…"
     ollama pull "$m"
   done
 fi
