@@ -51,9 +51,14 @@ public enum RewritePrompt {
     /// Puts the transcript between tags. Any tag-like text inside the dictation is removed so
     /// the transcript can't close the boundary early.
     public static func wrap(_ transcript: String) -> String {
-        let safe = transcript.replacingOccurrences(
-            of: #"<\s*/?\s*transcript\s*>"#, with: " ", options: [.regularExpression, .caseInsensitive])
-        return "<transcript>\n\(safe.trimmingCharacters(in: .whitespacesAndNewlines))\n</transcript>"
+        "<transcript>\n\(stripTags(transcript))\n</transcript>"
+    }
+
+    /// The transcript as the model sees it: any <transcript> / </transcript> text removed.
+    public static func stripTags(_ transcript: String) -> String {
+        transcript.replacingOccurrences(
+            of: #"<\s*/?\s*transcript\s*>"#, with: " ", options: [.regularExpression, .caseInsensitive]
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     public static func messages(for transcript: String) -> [ChatMessage] {
@@ -155,7 +160,9 @@ public struct RewriteGuard: Sendable {
 
     // MARK: Checking
 
-    public func check(raw: String, output: String) -> Verdict {
+    public func check(raw spoken: String, output: String) -> Verdict {
+        // Judge against what the model was actually given (tag-like text stripped).
+        let raw = RewritePrompt.stripTags(spoken)
         let out = Self.sanitize(output, raw: raw)
         if out.isEmpty { return .reject(reason: "empty output", output: out) }
 

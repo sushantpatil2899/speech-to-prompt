@@ -145,7 +145,8 @@ public struct LLMConfig: Codable, Equatable, Sendable {
     public var enabled: Bool = true
     /// Must be this Mac (127.0.0.1 / localhost / ::1); anything else is refused.
     public var baseURL: String = "http://127.0.0.1:11434"
-    public var model: String = "qwen3.5:9b"
+    /// gemma4:e4b won the stage-3 rewrite test: 24/24 good, 0 fallbacks, 173 ms median.
+    public var model: String = "gemma4:e4b"
     /// Total time allowed for the rewrite; after this the raw transcript is pasted.
     public var timeoutSeconds: Double = 3.0
     /// Send `think: false` (hybrid reasoning models would otherwise think first, which is slow).

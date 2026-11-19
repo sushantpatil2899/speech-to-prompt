@@ -58,9 +58,9 @@ The overlay's **Clean | Raw** toggle swaps the pasted text: ⌘Z, then it pastes
 this only if the same field still has focus and you haven't typed or clicked since. Otherwise it puts
 the other version on the clipboard for you to paste.
 
-The model is loaded into memory when the app starts and stays loaded (`keep_alive: -1`), about 7 GB of
-RAM for `qwen3.5:9b`. To free it: `ollama stop qwen3.5:9b` (the app reloads it on its next start or
-after a failed request).
+The model (`gemma4:e4b` by default, chosen by `eval/rewrite_test.py`) is loaded into memory when the app
+starts and stays loaded (`keep_alive: -1`); `ollama ps` shows how much memory it uses. To free it:
+`ollama stop gemma4:e4b` (the app reloads it on its next start or after a failed request).
 
 ## Hotkeys
 
@@ -118,7 +118,7 @@ Menu → **Open Config File** to edit it, then **Reload Config**. Any field you 
   "llm": {
     "enabled": true,
     "baseURL": "http://127.0.0.1:11434",
-    "model": "qwen3.5:9b",
+    "model": "gemma4:e4b",
     "timeoutSeconds": 3.0,
     "disableThinking": true,
     "temperature": 0,

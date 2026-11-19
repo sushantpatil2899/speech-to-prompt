@@ -18,7 +18,7 @@ guardrails. For each model you get:
 
 Usage:
   eval/.venv/bin/python eval/rewrite_test.py
-  eval/.venv/bin/python eval/rewrite_test.py --models qwen3.5:9b,gemma4:e4b,qwen3:8b
+  eval/.venv/bin/python eval/rewrite_test.py --models gemma4:e4b,qwen3.5:9b,qwen3:8b
   eval/.venv/bin/python eval/rewrite_test.py --timeout 10     # ignore latency, judge quality only
 """
 
@@ -76,7 +76,7 @@ def app_model() -> str:
     try:
         return json.loads(CONFIG.read_text())["llm"]["model"]
     except Exception:
-        return "qwen3.5:9b"
+        return "gemma4:e4b"
 
 
 def unload(model: str) -> None:
@@ -123,7 +123,7 @@ def run_model(cli: Path, model: str, cases: list[dict], timeout: float) -> tuple
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--models", default="qwen3.5:9b", help="comma-separated Ollama model names")
+    ap.add_argument("--models", default="gemma4:e4b", help="comma-separated Ollama model names")
     ap.add_argument("--cases", type=Path, default=ROOT / "eval" / "rewrite_cases.jsonl")
     ap.add_argument("--cli", type=Path, default=ROOT / "build" / "dictate-cli")
     ap.add_argument("--timeout", type=float, default=3.0, help="per-request limit, as in the app (default 3 s)")

@@ -8,8 +8,8 @@
 #
 # Usage: scripts/setup.sh [--eval] [--llm] [--llm-candidates] [--rebuild-whisper] [--small-model]
 #   --small-model     use ggml-large-v3-turbo-q5_0.bin (547 MB) instead of the full 1.6 GB model
-#   --llm             Ollama + qwen3.5:9b (~6.6 GB)
-#   --llm-candidates  also pull gemma4:e4b and qwen3:8b to compare with eval/rewrite_test.py (~15 GB more)
+#   --llm             Ollama + gemma4:e4b (the default clean-mode model)
+#   --llm-candidates  also pull qwen3.5:9b and qwen3:8b to compare with eval/rewrite_test.py
 #
 # Network use: github.com (whisper.cpp source), huggingface.co (model files), PyPI (eval deps),
 # Homebrew and ollama.com (Ollama and model downloads).
@@ -21,14 +21,14 @@ WHISPER_VERSION="${WHISPER_VERSION:-1.9.5}"
 SUPPORT="$HOME/Library/Application Support/SpeechToPrompt"
 MODELS="$SUPPORT/models"
 WITH_EVAL=0; REBUILD=0; WHISPER_MODEL="ggml-large-v3-turbo.bin"; WITH_LLM=0
-LLM_MODELS=("qwen3.5:9b")
+LLM_MODELS=("gemma4:e4b")
 for a in "$@"; do
   case "$a" in
     --eval) WITH_EVAL=1 ;;
     --rebuild-whisper) REBUILD=1 ;;
     --small-model) WHISPER_MODEL="ggml-large-v3-turbo-q5_0.bin" ;;
     --llm) WITH_LLM=1 ;;
-    --llm-candidates) WITH_LLM=1; LLM_MODELS=("qwen3.5:9b" "gemma4:e4b" "qwen3:8b") ;;
+    --llm-candidates) WITH_LLM=1; LLM_MODELS=("gemma4:e4b" "qwen3.5:9b" "qwen3:8b") ;;
     *) echo "unknown option $a"; exit 1 ;;
   esac
 done
